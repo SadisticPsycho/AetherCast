@@ -1,0 +1,68 @@
+name: Build AetherCast APKs
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+
+      # ---------- Sender ----------
+      - name: Prepare Sender
+        run: |
+          cd sender
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.7 || true
+          fi
+          chmod +x gradlew || true
+
+      - name: Build Sender APK
+        working-directory: ./sender
+        run: |
+          ./gradlew assembleDebug --stacktrace || gradle assembleDebug --stacktrace
+
+      - name: Upload Sender APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherCast-Sender
+          path: sender/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+
+      # ---------- Receiver ----------
+      - name: Prepare Receiver
+        run: |
+          cd receiver
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.7 || true
+          fi
+          chmod +x gradlew || true
+
+      - name: Build Receiver APK
+        working-directory: ./receiver
+        run: |
+          ./gradlew assembleDebug --stacktrace || gradle assembleDebug --stacktrace
+
+      - name: Upload Receiver APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherCast-Receiver
+          path: receiver/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+          
